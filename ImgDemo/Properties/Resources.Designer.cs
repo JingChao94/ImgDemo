@@ -63,9 +63,9 @@ namespace ImgDemo.Properties {
         /// <summary>
         ///   查找 System.Drawing.Bitmap 类型的本地化资源。
         /// </summary>
-        internal static System.Drawing.Bitmap _574e9258d109b3deb392a41bcebf6c81800a4c97 {
+        internal static System.Drawing.Bitmap _637399356059340000 {
             get {
-                object obj = ResourceManager.GetObject("574e9258d109b3deb392a41bcebf6c81800a4c97", resourceCulture);
+                object obj = ResourceManager.GetObject("637399356059340000", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }

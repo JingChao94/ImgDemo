@@ -150,6 +150,8 @@
             this.pictureBox1.BackColor = System.Drawing.Color.LavenderBlush;
             this.pictureBox1.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.pictureBox1.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.pictureBox1.ErrorImage = global::ImgDemo.Properties.Resources.微信图片_20191012100523;
+            this.pictureBox1.Image = global::ImgDemo.Properties.Resources._637399356059340000;
             this.pictureBox1.Location = new System.Drawing.Point(0, 0);
             this.pictureBox1.Name = "pictureBox1";
             this.pictureBox1.Size = new System.Drawing.Size(797, 389);

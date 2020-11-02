@@ -4,8 +4,11 @@ using System.ComponentModel;
 using System.Data;
 using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -15,7 +18,7 @@ namespace ImgDemo
 {
     public partial class Form1 : Form
     {
-        private Point point;
+        private PointF point;
         private Bitmap pbitmap;
         private Color pointColor = Color.LavenderBlush;
         private Color seletedColor = Color.Transparent;
@@ -61,7 +64,7 @@ namespace ImgDemo
                 {
                     this.point.Y = bmp.Height - 1;
                 }
-                pointColor = bmp.GetPixel(this.point.X, this.point.Y);
+                pointColor = bmp.GetPixel((int)this.point.X, (int)this.point.Y);
                 pictureBox1.BackColor = pointColor;
             }
         }
@@ -188,8 +191,28 @@ namespace ImgDemo
 
         private void pictureBox1_MouseClick(object sender, MouseEventArgs e)
         {
-            this.point.X = e.X;
-            this.point.Y = e.Y;
+            int originalWidth = this.pictureBox1.Image.Width;
+            int originalHeight = this.pictureBox1.Image.Height;
+
+            PropertyInfo rectangleProperty = this.pictureBox1.GetType().GetProperty("ImageRectangle", BindingFlags.Instance | BindingFlags.NonPublic);
+            Rectangle rectangle = (Rectangle)rectangleProperty.GetValue(this.pictureBox1, null);
+
+            int currentWidth = rectangle.Width;
+            int currentHeight = rectangle.Height;
+
+            double rate = (double)currentHeight / (double)originalHeight;
+
+            int black_left_width = (currentWidth == this.pictureBox1.Width) ? 0 : (this.pictureBox1.Width - currentWidth) / 2;
+            int black_top_height = (currentHeight == this.pictureBox1.Height) ? 0 : (this.pictureBox1.Height - currentHeight) / 2;
+
+            int zoom_x = e.X - black_left_width;
+            int zoom_y = e.Y - black_top_height;
+
+            double original_x = (double)zoom_x / rate;
+            double original_y = (double)zoom_y / rate;
+
+            this.point.X = (float)original_x;
+            this.point.Y = (float)original_y;
         }
 
         private void button3_Click(object sender, EventArgs e)
@@ -232,7 +255,103 @@ namespace ImgDemo
                 button5.Enabled = false;
                 return;
             }
-            pbitmap.Save(strSavePath + DateTime.Now.Ticks + ".jpg");
+            string filename = strSavePath + DateTime.Now.Ticks + ".jpg";
+            CompressImage(pbitmap, filename);
+            //pbitmap.Save(filename);
+        }
+
+        /// <summary>
+        /// 无损压缩图片
+        /// </summary>
+        /// <param name="sFile">原图片地址</param>
+        /// <param name="dFile">压缩后保存图片地址</param>
+        /// <param name="flag">压缩质量（数字越小压缩率越高）1-100</param>
+        /// <param name="size">压缩后图片的最大大小</param>
+        /// <param name="sfsc">是否是第一次调用</param>
+        /// <returns></returns>
+        public bool CompressImage(Image sFile, string dFile, int flag = 90, int size = 300, bool sfsc = true)
+        {
+            Image iSource = sFile;
+            ImageFormat tFormat = iSource.RawFormat;
+            int dHeight = iSource.Height / 2;
+            int dWidth = iSource.Width / 2;
+            int sW = 0, sH = 0;
+            //按比例缩放
+            Size tem_size = new Size(iSource.Width, iSource.Height);
+            if (tem_size.Width > dHeight || tem_size.Width > dWidth)
+            {
+                if ((tem_size.Width * dHeight) > (tem_size.Width * dWidth))
+                {
+                    sW = dWidth;
+                    sH = (dWidth * tem_size.Height) / tem_size.Width;
+                }
+                else
+                {
+                    sH = dHeight;
+                    sW = (tem_size.Width * dHeight) / tem_size.Height;
+                }
+            }
+            else
+            {
+                sW = tem_size.Width;
+                sH = tem_size.Height;
+            }
+
+            Bitmap ob = new Bitmap(dWidth, dHeight);
+            Graphics g = Graphics.FromImage(ob);
+            g.Clear(Color.WhiteSmoke);
+            g.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+            g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+
+            g.DrawImage(iSource, new Rectangle((dWidth - sW) / 2, (dHeight - sH) / 2, sW, sH), 0, 0, iSource.Width, iSource.Height, GraphicsUnit.Pixel);
+
+            g.Dispose();
+
+            //以下代码为保存图片时，设置压缩质量
+            EncoderParameters ep = new EncoderParameters();
+            long[] qy = new long[1];
+            qy[0] = flag;//设置压缩的比例1-100
+            EncoderParameter eParam = new EncoderParameter(System.Drawing.Imaging.Encoder.Quality, qy);
+            ep.Param[0] = eParam;
+
+            try
+            {
+                ImageCodecInfo[] arrayICI = ImageCodecInfo.GetImageEncoders();
+                ImageCodecInfo jpegICIinfo = null;
+                for (int x = 0; x < arrayICI.Length; x++)
+                {
+                    if (arrayICI[x].FormatDescription.Equals("JPEG"))
+                    {
+                        jpegICIinfo = arrayICI[x];
+                        break;
+                    }
+                }
+                if (jpegICIinfo != null)
+                {
+                    ob.Save(dFile, jpegICIinfo, ep);//dFile是压缩后的新路径
+                    FileInfo fi = new FileInfo(dFile);
+                    if (fi.Length > 1024 * size)
+                    {
+                        flag = flag - 10;
+                        CompressImage(sFile, dFile, flag, size, false);
+                    }
+                }
+                else
+                {
+                    ob.Save(dFile, tFormat);
+                }
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+            finally
+            {
+                iSource.Dispose();
+                ob.Dispose();
+            }
         }
     }
 
