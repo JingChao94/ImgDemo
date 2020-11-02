@@ -16,29 +16,51 @@ namespace ImgDemo
     public partial class Form1 : Form
     {
         private Point point;
+        private Bitmap pbitmap;
+        private Color pointColor = Color.LavenderBlush;
+        private Color seletedColor = Color.Transparent;
 
         public Form1()
         {
             InitializeComponent();
+            textBox1.LostFocus += TextLostFocus;
+        }
+
+        private void TextLostFocus(object sender, EventArgs e)
+        {
+            TextBox tb = (TextBox)sender;
+            if (tb.Name.Equals("tbEndFloor"))
+            {
+                if (!int.TryParse(tb.Text.Trim(), out int temp))
+                {
+                    tb.Text = "100";
+                }
+            }
         }
 
         private void button1_Click(object sender, EventArgs e)
         {
             Image img = pictureBox1.Image;
-            Bitmap pbitmap = new Bitmap(img);
+            pbitmap = new Bitmap(img);
             pbitmap = Conver_3(pbitmap, pbitmap.Width, pbitmap.Height, pointColor.R, pointColor.G, pointColor.B, seletedColor.R, seletedColor.G, seletedColor.B);
-
+            //pbitmap = Conver_2(pbitmap, pbitmap.Width, pbitmap.Height, pointColor.R, pointColor.G, pointColor.B);
             pictureBox1.Image = pbitmap;
+            button5.Enabled = true;
         }
-
-        Color pointColor = Color.LavenderBlush;
-        Color seletedColor = Color.LavenderBlush;
 
         private void button2_Click(object sender, EventArgs e)
         {
-            Image img = this.pictureBox1.Image;
+            Image img = this.pictureBox1.Image;//.Image;
             using (Bitmap bmp = new Bitmap(img))
             {
+                if (this.point.X >= bmp.Width)
+                {
+                    this.point.X = bmp.Width - 1;
+                }
+                if (this.point.Y >= bmp.Height)
+                {
+                    this.point.Y = bmp.Height - 1;
+                }
                 pointColor = bmp.GetPixel(this.point.X, this.point.Y);
                 pictureBox1.BackColor = pointColor;
             }
@@ -57,7 +79,7 @@ namespace ImgDemo
         /// <param name="g">替换色的RGB的G</param>
         /// <param name="b">替换色的RGB的B</param>
         /// <returns>处理后的结果图像</returns>
-        public static Bitmap Conver_3(Bitmap img, int w, int h, int R, int G, int B, int r, int g, int b)
+        public Bitmap Conver_3(Bitmap img, int w, int h, int R, int G, int B, int r, int g, int b)
         {
             Bitmap bt = new Bitmap(ConvertTo32bpp(img));
             Rectangle rect = new Rectangle(0, 0, w, h);
@@ -67,7 +89,7 @@ namespace ImgDemo
             byte[] rgbValues = new byte[bytes];
             System.Runtime.InteropServices.Marshal.Copy(ptr, rgbValues, 0, bytes);
             int len = rgbValues.Length;
-            byte a =100;
+            byte a = (byte)int.Parse(textBox1.Text);
             byte R1 = (byte)R;
             byte G1 = (byte)G;
             byte B1 = (byte)B;
@@ -90,7 +112,7 @@ namespace ImgDemo
         }
         #endregion      
         #region 图片背景透明化 Conver_1(Bitmap img, int w, int h)
-        public static Bitmap Conver_1(Bitmap img, int w, int h)
+        public Bitmap Conver_1(Bitmap img, int w, int h)
         {
             Bitmap bt = new Bitmap(ConvertTo32bpp(img));
             Rectangle rect = new Rectangle(0, 0, bt.Width, bt.Height);
@@ -126,7 +148,7 @@ namespace ImgDemo
         /// <param name="G">指定颜色RGB的G值</param>
         /// <param name="B">指定颜色RGB的B值</param>
         /// <returns>处理后的结果图像</returns>
-        public static Bitmap Conver_2(Bitmap img, int w, int h, int R, int G, int B)
+        public Bitmap Conver_2(Bitmap img, int w, int h, int R, int G, int B)
         {
 
             //测试结果不成功,图片没有变化
@@ -156,7 +178,7 @@ namespace ImgDemo
         }
         #endregion
 
-        public static Bitmap ConvertTo32bpp(Image img)
+        public Bitmap ConvertTo32bpp(Image img)
         {
             var bmp = new Bitmap(img.Width, img.Height, System.Drawing.Imaging.PixelFormat.Format32bppRgb);
             using (var gr = Graphics.FromImage(bmp))
@@ -177,6 +199,40 @@ namespace ImgDemo
             {
                 seletedColor = color.Color;
             }
+        }
+
+        private void button4_Click(object sender, EventArgs e)
+        {
+            OpenFileDialog fileDialog = new OpenFileDialog();
+            if (fileDialog.ShowDialog() == DialogResult.OK)
+            {
+                pictureBox1.Image = Image.FromFile(fileDialog.FileName);
+                pictureBox1.Width = pictureBox1.Image.Width;
+                pictureBox1.Height = pictureBox1.Image.Height;
+                pictureBox1.Dock = DockStyle.Fill;
+                pictureBox1.SizeMode = PictureBoxSizeMode.Zoom;
+                button1.Enabled = true;
+                button2.Enabled = true;
+                button3.Enabled = true;
+            }
+        }
+
+        private void button5_Click(object sender, EventArgs e)
+        {
+            FolderBrowserDialog folderDialog = new FolderBrowserDialog();
+            string strSavePath = "";
+            //按下确定选择的按钮  
+            if (folderDialog.ShowDialog() == DialogResult.OK)
+            {
+                //记录选中的目录 
+                strSavePath = folderDialog.SelectedPath + "\\";
+            }
+            else
+            {
+                button5.Enabled = false;
+                return;
+            }
+            pbitmap.Save(strSavePath + DateTime.Now.Ticks + ".jpg");
         }
     }
 
