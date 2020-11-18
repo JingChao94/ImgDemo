@@ -91,7 +91,7 @@ namespace ImgDemo
         {
             Image img = pbShowPanel.Image;
             pbitmap = new Bitmap(img);
-            pbitmap = Conver_3(pbitmap, pbitmap.Width, pbitmap.Height, pointColor.R, pointColor.G, pointColor.B, seletedColor.R, seletedColor.G, seletedColor.B);
+            pbitmap = ReplaceColor(pbitmap, pbitmap.Width, pbitmap.Height, pointColor.R, pointColor.G, pointColor.B, seletedColor.R, seletedColor.G, seletedColor.B);
             //pbitmap = Conver_2(pbitmap, pbitmap.Width, pbitmap.Height, pointColor.R, pointColor.G, pointColor.B);
             pbShowPanel.Image = pbitmap;
             btnSave.Enabled = true;
@@ -144,7 +144,22 @@ namespace ImgDemo
         }
 
         #endregion
-        #region 图片指定颜色替换成另一种颜色 Conver_3(Bitmap img, int w, int h, int R, int G, int B, int r, int g, int b)
+
+
+        /// <summary>
+        /// Image图像转化为32位位图
+        /// </summary>
+        /// <param name="img"></param>
+        /// <returns></returns>
+        public Bitmap ConvertTo32bpp(Image img)
+        {
+            var bmp = new Bitmap(img.Width, img.Height, System.Drawing.Imaging.PixelFormat.Format32bppRgb);
+            using (var gr = Graphics.FromImage(bmp))
+                gr.DrawImage(img, new Rectangle(0, 0, img.Width, img.Height));
+            return bmp;
+        }
+
+        #region 图片指定颜色替换成另一种颜色
         /// <summary>
         /// 指定颜色替换成另一种颜色
         /// </summary>
@@ -158,7 +173,7 @@ namespace ImgDemo
         /// <param name="g">替换色的RGB的G</param>
         /// <param name="b">替换色的RGB的B</param>
         /// <returns>处理后的结果图像</returns>
-        public Bitmap Conver_3(Bitmap img, int w, int h, int R, int G, int B, int r, int g, int b)
+        public Bitmap ReplaceColor(Bitmap img, int w, int h, int R, int G, int B, int r, int g, int b)
         {
             Bitmap bt = new Bitmap(ConvertTo32bpp(img));
             Rectangle rect = new Rectangle(0, 0, w, h);
@@ -190,6 +205,7 @@ namespace ImgDemo
             return bt;
         }
         #endregion      
+
         #region 图片背景透明化 Conver_1(Bitmap img, int w, int h)
         public Bitmap Conver_1(Bitmap img, int w, int h)
         {
@@ -257,18 +273,6 @@ namespace ImgDemo
         }
         #endregion
 
-        /// <summary>
-        /// Image图像转化为32位位图
-        /// </summary>
-        /// <param name="img"></param>
-        /// <returns></returns>
-        public Bitmap ConvertTo32bpp(Image img)
-        {
-            var bmp = new Bitmap(img.Width, img.Height, System.Drawing.Imaging.PixelFormat.Format32bppRgb);
-            using (var gr = Graphics.FromImage(bmp))
-                gr.DrawImage(img, new Rectangle(0, 0, img.Width, img.Height));
-            return bmp;
-        }
         
 
         /// <summary>
