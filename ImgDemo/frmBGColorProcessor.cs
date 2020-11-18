@@ -16,18 +16,20 @@ using System.Windows.Forms;
 
 namespace ImgDemo
 {
-    public partial class Form1 : Form
+    public partial class frmBgColorProcessor : Form
     {
         private PointF point;
         private Bitmap pbitmap;
         private Color pointColor = Color.LavenderBlush;
         private Color seletedColor = Color.Transparent;
 
-        public Form1()
+        public frmBgColorProcessor()
         {
             InitializeComponent();
-            textBox1.LostFocus += TextLostFocus;
+            tbTolerance.LostFocus += TextLostFocus;
         }
+
+        #region 交互事件
 
         private void TextLostFocus(object sender, EventArgs e)
         {
@@ -41,19 +43,25 @@ namespace ImgDemo
             }
         }
 
-        private void button1_Click(object sender, EventArgs e)
+        private void btnSelectImg_Click(object sender, EventArgs e)
         {
-            Image img = pictureBox1.Image;
-            pbitmap = new Bitmap(img);
-            pbitmap = Conver_3(pbitmap, pbitmap.Width, pbitmap.Height, pointColor.R, pointColor.G, pointColor.B, seletedColor.R, seletedColor.G, seletedColor.B);
-            //pbitmap = Conver_2(pbitmap, pbitmap.Width, pbitmap.Height, pointColor.R, pointColor.G, pointColor.B);
-            pictureBox1.Image = pbitmap;
-            button5.Enabled = true;
+            OpenFileDialog fileDialog = new OpenFileDialog();
+            if (fileDialog.ShowDialog() == DialogResult.OK)
+            {
+                pbShowPanel.Image = Image.FromFile(fileDialog.FileName);
+                pbShowPanel.Width = pbShowPanel.Image.Width;
+                pbShowPanel.Height = pbShowPanel.Image.Height;
+                pbShowPanel.Dock = DockStyle.Fill;
+                pbShowPanel.SizeMode = PictureBoxSizeMode.Zoom;
+                btnReplace.Enabled = true;
+                btnQuerybgColor.Enabled = true;
+                btnSelectReplacementColor.Enabled = true;
+            }
         }
 
-        private void button2_Click(object sender, EventArgs e)
+        private void btnQuerybgColor_Click(object sender, EventArgs e)
         {
-            Image img = this.pictureBox1.Image;//.Image;
+            Image img = this.pbShowPanel.Image;//.Image;
             using (Bitmap bmp = new Bitmap(img))
             {
                 if (this.point.X >= bmp.Width)
@@ -65,9 +73,77 @@ namespace ImgDemo
                     this.point.Y = bmp.Height - 1;
                 }
                 pointColor = bmp.GetPixel((int)this.point.X, (int)this.point.Y);
-                pictureBox1.BackColor = pointColor;
+                pbShowPanel.BackColor = pointColor;
+            }
+
+        }
+
+        private void btnSelectReplacementColor_Click(object sender, EventArgs e)
+        {
+            ColorDialog color = new ColorDialog();
+            if (color.ShowDialog() == DialogResult.OK)
+            {
+                seletedColor = color.Color;
             }
         }
+
+        private void btnReplace_Click(object sender, EventArgs e)
+        {
+            Image img = pbShowPanel.Image;
+            pbitmap = new Bitmap(img);
+            pbitmap = Conver_3(pbitmap, pbitmap.Width, pbitmap.Height, pointColor.R, pointColor.G, pointColor.B, seletedColor.R, seletedColor.G, seletedColor.B);
+            //pbitmap = Conver_2(pbitmap, pbitmap.Width, pbitmap.Height, pointColor.R, pointColor.G, pointColor.B);
+            pbShowPanel.Image = pbitmap;
+            btnSave.Enabled = true;
+        }
+
+        private void btnSave_Click(object sender, EventArgs e)
+        {
+            FolderBrowserDialog folderDialog = new FolderBrowserDialog();
+            string strSavePath = "";
+            //按下确定选择的按钮  
+            if (folderDialog.ShowDialog() == DialogResult.OK)
+            {
+                //记录选中的目录 
+                strSavePath = folderDialog.SelectedPath + "\\";
+            }
+            else
+            {
+                btnSave.Enabled = false;
+                return;
+            }
+            string filename = strSavePath + DateTime.Now.Ticks + ".jpg";
+            CompressImage(pbitmap, filename);
+            //pbitmap.Save(filename);
+        }
+
+        private void pbShowPanel_MouseClick(object sender, MouseEventArgs e)
+        {
+            int originalWidth = this.pbShowPanel.Image.Width;
+            int originalHeight = this.pbShowPanel.Image.Height;
+
+            PropertyInfo rectangleProperty = this.pbShowPanel.GetType().GetProperty("ImageRectangle", BindingFlags.Instance | BindingFlags.NonPublic);
+            Rectangle rectangle = (Rectangle)rectangleProperty.GetValue(this.pbShowPanel, null);
+
+            int currentWidth = rectangle.Width;
+            int currentHeight = rectangle.Height;
+
+            double rate = (double)currentHeight / (double)originalHeight;
+
+            int black_left_width = (currentWidth == this.pbShowPanel.Width) ? 0 : (this.pbShowPanel.Width - currentWidth) / 2;
+            int black_top_height = (currentHeight == this.pbShowPanel.Height) ? 0 : (this.pbShowPanel.Height - currentHeight) / 2;
+
+            int zoom_x = e.X - black_left_width;
+            int zoom_y = e.Y - black_top_height;
+
+            double original_x = (double)zoom_x / rate;
+            double original_y = (double)zoom_y / rate;
+
+            this.point.X = (float)original_x;
+            this.point.Y = (float)original_y;
+        }
+
+        #endregion
         #region 图片指定颜色替换成另一种颜色 Conver_3(Bitmap img, int w, int h, int R, int G, int B, int r, int g, int b)
         /// <summary>
         /// 指定颜色替换成另一种颜色
@@ -92,7 +168,7 @@ namespace ImgDemo
             byte[] rgbValues = new byte[bytes];
             System.Runtime.InteropServices.Marshal.Copy(ptr, rgbValues, 0, bytes);
             int len = rgbValues.Length;
-            byte a = (byte)int.Parse(textBox1.Text);
+            byte a = (byte)int.Parse(tbTolerance.Text);
             byte R1 = (byte)R;
             byte G1 = (byte)G;
             byte B1 = (byte)B;
@@ -181,6 +257,11 @@ namespace ImgDemo
         }
         #endregion
 
+        /// <summary>
+        /// Image图像转化为32位位图
+        /// </summary>
+        /// <param name="img"></param>
+        /// <returns></returns>
         public Bitmap ConvertTo32bpp(Image img)
         {
             var bmp = new Bitmap(img.Width, img.Height, System.Drawing.Imaging.PixelFormat.Format32bppRgb);
@@ -188,77 +269,7 @@ namespace ImgDemo
                 gr.DrawImage(img, new Rectangle(0, 0, img.Width, img.Height));
             return bmp;
         }
-
-        private void pictureBox1_MouseClick(object sender, MouseEventArgs e)
-        {
-            int originalWidth = this.pictureBox1.Image.Width;
-            int originalHeight = this.pictureBox1.Image.Height;
-
-            PropertyInfo rectangleProperty = this.pictureBox1.GetType().GetProperty("ImageRectangle", BindingFlags.Instance | BindingFlags.NonPublic);
-            Rectangle rectangle = (Rectangle)rectangleProperty.GetValue(this.pictureBox1, null);
-
-            int currentWidth = rectangle.Width;
-            int currentHeight = rectangle.Height;
-
-            double rate = (double)currentHeight / (double)originalHeight;
-
-            int black_left_width = (currentWidth == this.pictureBox1.Width) ? 0 : (this.pictureBox1.Width - currentWidth) / 2;
-            int black_top_height = (currentHeight == this.pictureBox1.Height) ? 0 : (this.pictureBox1.Height - currentHeight) / 2;
-
-            int zoom_x = e.X - black_left_width;
-            int zoom_y = e.Y - black_top_height;
-
-            double original_x = (double)zoom_x / rate;
-            double original_y = (double)zoom_y / rate;
-
-            this.point.X = (float)original_x;
-            this.point.Y = (float)original_y;
-        }
-
-        private void button3_Click(object sender, EventArgs e)
-        {
-            ColorDialog color = new ColorDialog();
-            if (color.ShowDialog() == DialogResult.OK)
-            {
-                seletedColor = color.Color;
-            }
-        }
-
-        private void button4_Click(object sender, EventArgs e)
-        {
-            OpenFileDialog fileDialog = new OpenFileDialog();
-            if (fileDialog.ShowDialog() == DialogResult.OK)
-            {
-                pictureBox1.Image = Image.FromFile(fileDialog.FileName);
-                pictureBox1.Width = pictureBox1.Image.Width;
-                pictureBox1.Height = pictureBox1.Image.Height;
-                pictureBox1.Dock = DockStyle.Fill;
-                pictureBox1.SizeMode = PictureBoxSizeMode.Zoom;
-                button1.Enabled = true;
-                button2.Enabled = true;
-                button3.Enabled = true;
-            }
-        }
-
-        private void button5_Click(object sender, EventArgs e)
-        {
-            FolderBrowserDialog folderDialog = new FolderBrowserDialog();
-            string strSavePath = "";
-            //按下确定选择的按钮  
-            if (folderDialog.ShowDialog() == DialogResult.OK)
-            {
-                //记录选中的目录 
-                strSavePath = folderDialog.SelectedPath + "\\";
-            }
-            else
-            {
-                button5.Enabled = false;
-                return;
-            }
-            string filename = strSavePath + DateTime.Now.Ticks + ".jpg";
-            CompressImage(pbitmap, filename);
-            //pbitmap.Save(filename);
-        }
+        
 
         /// <summary>
         /// 无损压缩图片
